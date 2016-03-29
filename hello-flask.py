@@ -16,12 +16,7 @@ history = []
 # Load the history
 with open('data.json') as data_file:
 	history = json.load(data_file)
-#	print 'loaded history'
-#	print dir(data)
-#	print data
-#	
-#	history = data['history']
-#
+	
 spi = spidev.SpiDev()
 spi.open(0,0)
 
@@ -68,9 +63,13 @@ def turnMeasuringDevicesOff():
 	
 def foo():
   print(time.ctime())
+  turnMeasuringDevicesOn()
+  time.sleep(3) 
   history.append(ConvertVolts(ReadChannel(temp_channel),2))
   savehistory(history)
-  threading.Timer(10,foo).start()
+  time.sleep(3) 
+  turnMeasuringDevicesOff()
+  threading.Timer(3600,foo).start() # run every hour
 foo()
 
 app= Flask(__name__)
