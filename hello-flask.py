@@ -5,17 +5,18 @@ import os
 import threading
 import sched
 import json
+import RPi.GPIO as GPIO
+
+GPIO.setmode(GPIO.BOARD)
+relayPin = 26
+GPIO.setup(relayPin,GPIO.OUT)
+GPIO.output(relayPin,0)
 history = []
 
 # Load the history
 with open('data.json') as data_file:
 	history = json.load(data_file)
-#	print 'loaded history'
-#	print dir(data)
-#	print data
-#	
-#	history = data['history']
-#
+	
 spi = spidev.SpiDev()
 spi.open(0,0)
 
@@ -49,15 +50,31 @@ def getJSON(currentValue, history):
 def savehistory(history):
   with open('data.json','w') as outfile:
     json.dump(history,outfile) 
- 
+
+
+def turnMeasuringDevicesOn():
+	GPIO.output(relayPin,1)
+	print 'devices on'
+
+def turnMeasuringDevicesOff():
+	GPIO.output(relayPin,0)
+	print 'devices off'
+
+	
 def foo():
   print(time.ctime())
+  turnMeasuringDevicesOn()
+  time.sleep(3) 
   history.append(ConvertVolts(ReadChannel(temp_channel),2))
   savehistory(history)
-  threading.Timer(10,foo).start()
+  time.sleep(3) 
+  turnMeasuringDevicesOff()
+  threading.Timer(3600,foo).start() # run every hour
 foo()
 
 app= Flask(__name__)
+
+
 
 @app.route("/")
 def hello():
