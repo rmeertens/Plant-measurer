@@ -11,11 +11,18 @@ GPIO.setmode(GPIO.BOARD)
 relayPin = 26
 GPIO.setup(relayPin,GPIO.OUT)
 GPIO.output(relayPin,0)
-history = []
-
+light_history = []
+moisture_history = []
+nameLightDataFile = 'lightdata.json'
+nameMoistureDataFile='moisturedata.json'
+light_channel  = 0
+moisture_channels=[1,2,3]
 # Load the history
-with open('data.json') as data_file:
-	history = json.load(data_file)
+with open(nameMoistureDataFile) as data_file:
+	moisture_history = json.load(data_file)
+	
+with open(nameLightDataFile) as data_file:
+	light_history = json.load(data_file)
 	
 spi = spidev.SpiDev()
 spi.open(0,0)
@@ -34,22 +41,18 @@ def ConvertVolts(data,places):
   volts = round(volts,places)  
   return volts
   
-temp_channel  = 1
-
-# Function to calculate temperature from
-# TMP36 data, rounded to specified
-# number of decimal places.
-def ConvertTemp(data,places):
-  temp = ((data * 330)/float(1023))-50
-  temp = round(temp,places)
-  return temp
 
 def getJSON(currentValue, history):
   return jsonify({"id":currentValue,"message":"use /history for the complete history", "history":history})
 
 def savehistory(history):
-  with open('data.json','w') as outfile:
+  with open(nameMoistureDataFile,'w') as outfile:
     json.dump(history,outfile) 
+
+def saveLightHistory(history):
+  with open(nameLightDataFile,'w') as outfile:
+    json.dump(history,outfile) 
+
 
 
 def turnMeasuringDevicesOn():
@@ -60,13 +63,27 @@ def turnMeasuringDevicesOff():
 	GPIO.output(relayPin,0)
 	print 'devices off'
 
+def measure_data():
+  light_level = ReadChannel(light_channel)
+  light_volts = ConvertVolts(light_level,2)
+  moisture_channels=[1,2,3]
+  voltsToReturn=[]
+  voltsToReturn.append(light_volts)
+  for channel in moisture_channels:
+    moisture_level=ReadChannel(channel)
+    moisture_volt =ConvertVolts(moisture_level,2)
+    voltsToReturn.append(moisture_volt)
+  return voltsToReturn
 	
 def foo():
   print(time.ctime())
   turnMeasuringDevicesOn()
   time.sleep(3) 
-  history.append(ConvertVolts(ReadChannel(temp_channel),2))
-  savehistory(history)
+  data = measure_data()
+  light_history.append(data[0])
+  moisture_history.append(data[1::])
+  savehistory(moisture_history)
+  saveLightHistory(light_history)
   time.sleep(3) 
   turnMeasuringDevicesOff()
   threading.Timer(3600,foo).start() # run every hour
@@ -79,14 +96,7 @@ app= Flask(__name__)
 @app.route("/")
 def hello():
   # Read the temperature sensor data
-  temp_level = ReadChannel(temp_channel)
-  temp_volts = ConvertVolts(temp_level,2)
-  temp       = ConvertTemp(temp_level,2)
-
-  # Print out results
-  return getJSON(temp_volts,history[-500::])
-#jsonify({"id":temp_volts,"message":"use /history for the complete history", "history":history[-500::]})
-
+  return getJSON(0,light_history[-500::])
 @app.route("/history")
 def getHistory():
   return jsonify({"id":0, "history":history})
