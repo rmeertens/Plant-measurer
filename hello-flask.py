@@ -86,7 +86,7 @@ def foo():
   saveLightHistory(light_history)
   time.sleep(3) 
   turnMeasuringDevicesOff()
-  threading.Timer(3600,foo).start() # run every hour
+  threading.Timer(60,foo).start() # run every hour
 foo()
 
 app= Flask(__name__)
@@ -101,6 +101,9 @@ def hello():
 def getHistory():
   return jsonify({"id":0, "history":history})
 
+@app.route("/moisture")
+def getMoisture():
+  return jsonify({"id":0, "history":moisture_history})
 
 
 if __name__=="__main__":
